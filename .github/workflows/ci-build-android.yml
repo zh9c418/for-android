@@ -52,12 +52,12 @@ jobs:
           set -euo pipefail
 
           if [ ! -f stoatbuild.properties ]; then
-            cat > stoatbuild.properties <<EOF
-build.debug.app_name=Stoat Debug
-build.flavour_id=${{ secrets.STOAT_FLAVOUR_ID != '' && secrets.STOAT_FLAVOUR_ID || 'ZZUU' }}
-sentry.dsn=${{ secrets.SENTRY_DSN }}
-sentry.upload_mappings=false
-EOF
+          cat > stoatbuild.properties <<EOF
+          build.debug.app_name=Stoat Debug
+          build.flavour_id=${{ secrets.STOAT_FLAVOUR_ID != '' && secrets.STOAT_FLAVOUR_ID || 'ZZUU' }}
+          sentry.dsn=${{ secrets.SENTRY_DSN }}
+          sentry.upload_mappings=false
+          EOF
           fi
 
           if [ ! -f app/google-services.json ] && [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
