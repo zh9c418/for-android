@@ -30,6 +30,42 @@ jobs:
       - name: Validate Gradle wrapper
         uses: gradle/wrapper-validation-action@v2
 
+      - name: Normalize Gradle properties for AGP 9
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -f gradle.properties ]; then
+            cp gradle.properties gradle.properties.bak
+
+            sed -i '/^android.builtInKotlin[[:space:]]*=/d' gradle.properties
+            sed -i '/^android.newDsl[[:space:]]*=/d' gradle.properties
+
+            echo "Sanitized gradle.properties for AGP 9 migration"
+            echo "--- gradle.properties ---"
+            cat gradle.properties
+          fi
+
+      - name: Prepare CI config files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ ! -f stoatbuild.properties ]; then
+            cat > stoatbuild.properties <<EOF
+build.debug.app_name=Stoat Debug
+build.flavour_id=${{ secrets.STOAT_FLAVOUR_ID != '' && secrets.STOAT_FLAVOUR_ID || 'ZZUU' }}
+sentry.dsn=${{ secrets.SENTRY_DSN }}
+sentry.upload_mappings=false
+EOF
+          fi
+
+          if [ ! -f app/google-services.json ] && [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
+            printf '%s' '${{ secrets.GOOGLE_SERVICES_JSON }}' > app/google-services.json
+          elif [ ! -f app/google-services.json ] && [ -f app/google-services.json.example ]; then
+            cp app/google-services.json.example app/google-services.json
+          fi
+
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
