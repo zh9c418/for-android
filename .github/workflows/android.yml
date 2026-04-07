@@ -2,46 +2,56 @@ name: Android CI
 
 on:
   push:
-    branches: [ "dev" ]
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main", "dev" ]
 
 jobs:
   build:
-    if: ${{ false }} # at the moment this simply wastes our minutes, we will enable it when we have unit tests etc.
-
+    name: Build Debug APK
     runs-on: ubuntu-latest
 
-    env:
-      RVX_SENTRY_DSN: ${{ vars.RVX_SENTRY_DSN }}
-      RVX_ANALYSIS_ENABLED: ${{ vars.RVX_ANALYSIS_ENABLED }}
-      RVX_ANALYSIS_BASEURL: ${{ vars.RVX_ANALYSIS_BASEURL }}
-      RVX_DEBUG_APP_NAME: ${{ vars.RVX_DEBUG_APP_NAME }}
-      RVX_BUILD_FLAVOUR_ID: ${{ vars.RVX_BUILD_FLAVOUR_ID }}
-
     steps:
-      - uses: actions/checkout@v4
+      # 1. 克隆仓库并拉取子模块
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          submodules: 'recursive'
-      - name: set up JDK 21
+          submodules: recursive
+
+      # 2. 配置 Java 17 和 Gradle 缓存
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'oracle'
+          java-version: '17'
+          distribution: 'temurin'
           cache: gradle
 
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v2
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Build with Gradle
-        run: ./gradlew --no-daemon assembleDebug
-
-      - name: Archive debug APK
-        uses: actions/upload-artifact@v3
+      # 3. 配置 Deno 环境
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
         with:
-          name: debug-apk
-          retention-days: 5
-          path: |
-            app/build/outputs/apk/debug/app-debug.apk
+          deno-version: v1.x
+
+      # 4. 下载额外的内嵌依赖项
+      - name: Download embedded dependencies
+        run: deno run -A scripts/download_deps.ts -y
+
+      # 5. 准备所有所需的配置文件
+      - name: Prepare configuration files
+        run: |
+          cp stoatbuild.properties.example stoatbuild.properties
+          cp sentry.properties.example sentry.properties
+          cp app/google-services.json.example app/google-services.json
+
+      # 6. 赋予 Gradle 脚本执行权限并编译 APK
+      - name: Build Debug APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      # 7. 上传编译产物 (APK)
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: app/build/outputs/apk/debug/*.apk
