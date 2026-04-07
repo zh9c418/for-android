@@ -21,6 +21,17 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Install Android CMD tools
+        run: | 
+          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}"
+          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
+          curl -fSL "https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip" -o commandlinetools.zip
+          unzip -q commandlinetools.zip
+          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+          mv commandlinetools/* "$ANDROID_SDK_ROOT/cmdline-tools/latest/"
+          export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.0"
 
       - name: Install Android SDK command-line tools and required components
         env:
